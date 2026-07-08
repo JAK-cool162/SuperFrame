@@ -1,0 +1,16 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "com.jak.superframe.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "client": [
+    "GameRendererMixin",
+    "LevelRendererMixin",
+    "RenderTargetMixin",
+    "WindowMixin",
+    "compat.iris.IrisMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

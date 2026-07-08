@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "id": "superframe",
+  "version": "${version}",
+  "name": "SuperFrame",
+  "description": "Upscaling, performance tweaks, and experimental frame generation for Minecraft. Works on ARM64 and x86_64. Sodium/Iris compatible.",
+  "authors": [
+    "JAK-cool162"
+  ],
+  "contact": {
+    "homepage": "https://github.com/JAK-cool162/SuperFrame",
+    "sources": "https://github.com/JAK-cool162/SuperFrame"
+  },
+  "license": "MIT",
+  "icon": "assets/superframe/icon.png",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "com.jak.superframe.SuperFrameClient"
+    ],
+    "modmenu": [
+      "com.jak.superframe.compat.modmenu.ModMenuApiImpl"
+    ]
+  },
+  "mixins": [
+    "superframe.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.16.0",
+    "fabric-api": "*",
+    "minecraft": "~1.21.1",
+    "java": ">=21",
+    "cloth-config": ">=15.0.0"
+  },
+  "suggests": {
+    "modmenu": "*",
+    "sodium": "*",
+    "iris": "*"
+  }
+}
