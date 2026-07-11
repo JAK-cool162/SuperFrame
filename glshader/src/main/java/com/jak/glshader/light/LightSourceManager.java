@@ -114,7 +114,7 @@ public class LightSourceManager {
             } else {
                 unregisterLight(pos);
             }
-            // Light level changed – mark nearby lights dirty (they may be occluded differently now)
+            // Light level changed – mark nearby lights dirty with ring-aware threshold
             markDirtyInRange(pos, 16);
             return;
         }
@@ -127,29 +127,24 @@ public class LightSourceManager {
                 wasSolid = oldState.isSolidRender(level, pos);
                 isSolid = newState.isSolidRender(level, pos);
             } else {
-                // Fallback when Level is not available (mixin context)
                 wasSolid = oldState.isSolid();
                 isSolid = newState.isSolid();
             }
         } catch (Throwable t) {
-            // Mapping differences between 1.20 / 1.21 – fall back to simple solid check
             wasSolid = oldState.isSolid();
             isSolid = newState.isSolid();
         }
         if (wasSolid != isSolid) {
+            // Ring-aware dirty marking
             markDirtyInRange(pos, 16);
-        } else {
-            // Even if opacity didn't change, be conservative – a block change near a light can affect shadows
-            // Only mark dirty if the block is within light range of any source – markDirtyInRange already does that
-            // For now, do nothing extra – LightCacheManager already invalidated chunk light cache
         }
+        // else: no opacity change – still allow LightCacheManager to handle it, shadow cubemaps stay clean
     }
 
-    /** Find all light sources within range of a block change, mark their cubemap dirty */
+    /** Find all light sources within range of a block change, mark their cubemap dirty – RING AWARE */
     public static void markDirtyInRange(BlockPos changedPos, int range) {
         int count = 0;
         int rangeSq = range * range;
-        // Iterate over nearby chunks for efficiency
         int chunkRadius = (range >> 4) + 1;
         int cx = changedPos.getX() >> 4;
         int cz = changedPos.getZ() >> 4;
@@ -160,50 +155,96 @@ public class LightSourceManager {
                     long chunkKey = net.minecraft.world.level.ChunkPos.asLong(cx + dx, cz + dz);
                     List<LightSource> list = CHUNK_INDEX.get(chunkKey);
                     if (list == null) continue;
-                    // Copy to avoid CME
                     List<LightSource> copy;
                     synchronized (list) {
                         copy = new ArrayList<>(list);
                     }
                     for (LightSource ls : copy) {
                         if (ls.getPos().distSqr(changedPos) <= rangeSq) {
-                            ls.markDirty();
-                            count++;
+                            // Ring-aware: onNearbyBlockChange() increments counter and marks dirty only if threshold reached
+                            // Ring 1: 1 change = dirty
+                            // Ring 2: 2-3 changes
+                            // Ring 3: 5 changes, low priority
+                            // Ring 4: 20 changes, barely ever
+                            if (ls.onNearbyBlockChange()) {
+                                count++;
+                            }
                         }
                     }
                 }
             }
         }
         if (count > 0) {
-            GlShaderClient.LOGGER.debug("Marked {} light cubemaps dirty near {}", count, changedPos);
+            GlShaderClient.LOGGER.debug("Marked {} light cubemaps dirty near {} (ring-aware)", count, changedPos);
         }
     }
 
-    /** Process dirty cubemaps – call once per client tick, max N per frame */
+    /** Process dirty cubemaps – call once per client tick, max N per frame – CASCADED RINGS */
     public static void tick(Level level) {
         if (!GlShader.shouldRunShaders()) return;
         if (level == null) return;
 
-        int budget = getMaxUpdatesPerFrame();
-        int updated = 0;
+        // Update ring assignments based on current player position
+        // Do this lazily – only for lights we're about to consider
+        net.minecraft.world.phys.Vec3 playerPos = com.jak.glshader.shadow.CascadedShadowManager.getPlayerPos();
+        long currentTick = com.jak.glshader.shadow.CascadedShadowManager.getClientTick();
+
+        // Collect dirty lights, update their ring, filter by update frequency
+        List<LightSource> candidates = new ArrayList<>();
         for (LightSource ls : LIGHTS.values()) {
-            if (updated >= budget) break;
-            if (ls.isDirty() && !ls.isRemoved()) {
-                try {
-                    ls.getShadowCubemap().rebuild(level);
-                    updated++;
-                } catch (Exception e) {
-                    GlShaderClient.LOGGER.warn("Failed to rebuild shadow cubemap at {}: {}", ls.getPos(), e.toString());
-                    // Mark clean to avoid spamming – will get dirty again on next block change
-                    // Actually leave dirty = false already set in rebuild
-                }
-            }
-        }
-        if (updated > 0) {
-            GlShaderClient.LOGGER.debug("Rebuilt {} shadow cubemaps this tick, {} total lights", updated, LIGHTS.size());
+            if (ls.isRemoved()) continue;
+            if (!ls.isDirty()) continue;
+
+            // Update ring assignment (moves with player)
+            ls.updateRing();
+
+            // Ring frequency check – should we update this tick?
+            if (!ls.shouldUpdateThisTick()) continue;
+
+            candidates.add(ls);
         }
 
-        // Periodic cleanup of stale lights (not seen in 60s)
+        // Sort by ring priority, then distance to player (closest first)
+        candidates.sort((a, b) -> {
+            int pa = com.jak.glshader.shadow.CascadedShadowManager.getUpdatePriority(a, a.getPos().distSqr(new net.minecraft.core.BlockPos((int)playerPos.x, (int)playerPos.y, (int)playerPos.z)));
+            int pb = com.jak.glshader.shadow.CascadedShadowManager.getUpdatePriority(b, b.getPos().distSqr(new net.minecraft.core.BlockPos((int)playerPos.x, (int)playerPos.y, (int)playerPos.z)));
+            return Integer.compare(pa, pb);
+        });
+
+        int budget = getMaxUpdatesPerFrame();
+        int updated = 0;
+        int[] ringCounts = new int[4];
+
+        for (LightSource ls : candidates) {
+            if (updated >= budget) break;
+            try {
+                // Ensure cubemap resolution matches current ring
+                int baseRes = ls.getBaseCubemapResolution();
+                int targetRes = com.jak.glshader.shadow.CascadedShadowManager.getResolutionForLight(ls, baseRes);
+                if (ls.getShadowCubemap().getResolution() != targetRes) {
+                    ls.getShadowCubemap().setResolution(targetRes);
+                }
+
+                ls.getShadowCubemap().rebuild(level);
+                ls.setLastShadowUpdateTick(currentTick);
+                ls.resetBlockChangeCounter();
+                updated++;
+
+                // Track ring stats
+                var ring = ls.getCurrentRing();
+                if (ring != null) ringCounts[ring.ordinal()]++;
+
+            } catch (Exception e) {
+                GlShaderClient.LOGGER.warn("Failed to rebuild shadow cubemap at {}: {}", ls.getPos(), e.toString());
+            }
+        }
+
+        if (updated > 0) {
+            GlShaderClient.LOGGER.debug("Rebuilt {} shadow cubemaps [R1={}, R2={}, R3={}, R4={}] / {} total lights",
+                    updated, ringCounts[0], ringCounts[1], ringCounts[2], ringCounts[3], LIGHTS.size());
+        }
+
+        // Periodic cleanup of stale lights
         long now = System.currentTimeMillis();
         LIGHTS.entrySet().removeIf(e -> {
             LightSource ls = e.getValue();

@@ -2,6 +2,7 @@ package com.jak.glshader;
 
 import com.jak.glshader.light.LightCacheManager;
 import com.jak.glshader.light.LightSourceManager;
+import com.jak.glshader.shadow.CascadedShadowManager;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.Minecraft;
@@ -17,13 +18,16 @@ public class GlShaderClient implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         INSTANCE = this;
-        LOGGER.info("GLShader initializing – Chunk Light Cache + Shadow Cubemaps");
+        LOGGER.info("GLShader initializing – Chunk Light Cache + Shadow Cubemaps + Cascaded Rings");
         GlShader.init();
         LightCacheManager.init();
         LightSourceManager.init();
+        CascadedShadowManager.init();
 
-        // Tick dirty shadow cubemaps – process N per frame, never every frame for all lights
+        // Tick cascaded shadow rings – update player position, ring assignments
+        // Then process dirty shadow cubemaps – N per frame, prioritized by ring
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
+            CascadedShadowManager.tick();
             if (client.level == null) return;
             if (!GlShader.shouldRunShaders()) return;
             LightSourceManager.tick(client.level);

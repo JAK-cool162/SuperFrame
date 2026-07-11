@@ -111,8 +111,13 @@ SuperFrame adds: Frame Generation module, performance tweak suite, keybind HUD, 
 Implements:
 
 1. **Chunk Light Cache System** ✅ – LevelChunk mixin, pre-calculated light zones, invalidates on block change
-2. **Per-Light Shadow Cubemap** ✅ – each BlockPos light owns a 360° shadow cubemap, 6-face depth map, cached, only recalculates when a block changes within light range, NOT every frame – max N updates/frame configurable
-3. Cascaded Shadow Rings (planned)
+2. **Per-Light Shadow Cubemap** ✅ – each BlockPos light owns a 360° shadow cubemap, 6-face depth map, cached, only recalculates when a block changes within light range, NOT every frame
+3. **Cascaded Shadow Rings** ✅ – 4 rings around player:
+   - Ring 1: 0-16 blocks = full resolution, updates on any block change
+   - Ring 2: 16-48 blocks = 50% resolution, updates every 2-3 block changes
+   - Ring 3: 48-96 blocks = 25% resolution, updates lazily
+   - Ring 4: 96+ blocks = chunk blob only, barely ever updates
+   - Rings move with player, hook into dirty-flag system, prioritized update scheduler
 4. Static World vs Entity Layer – 25% / 75% split → SuperFrame FSR (planned)
 5. Heightmap Sun Occlusion (planned)
 6. Fake Global Illumination (planned)

@@ -46,8 +46,48 @@ public class GlShaderConfig implements ConfigData {
         @ConfigEntry.BoundedDiscrete(min = 1, max = 8)
         public int maxUpdatesPerFrame = 2;
 
-        public boolean cascadedRings = true;
+        @ConfigEntry.Gui.CollapsibleObject(startExpanded = true)
+        public CascadedRings cascaded = new CascadedRings();
+
         public boolean heightmapSunOcclusion = true;
+    }
+
+    public static class CascadedRings {
+        @ConfigEntry.Gui.Tooltip
+        public boolean cascadedRings = true;
+
+        @ConfigEntry.Gui.Tooltip
+        public int ring1Radius = 16;
+        @ConfigEntry.Gui.Tooltip
+        public int ring2Radius = 48;
+        @ConfigEntry.Gui.Tooltip
+        public int ring3Radius = 96;
+        // Ring 4 = 96+ to infinity
+
+        @ConfigEntry.Gui.Tooltip
+        public float ring2ResolutionScale = 0.5f;
+        @ConfigEntry.Gui.Tooltip
+        public float ring3ResolutionScale = 0.25f;
+        @ConfigEntry.Gui.Tooltip
+        public float ring4ResolutionScale = 0.1f;
+
+        @ConfigEntry.Gui.Tooltip
+        public int ring1UpdateInterval = 1;
+        @ConfigEntry.Gui.Tooltip
+        public int ring2UpdateInterval = 3;
+        @ConfigEntry.Gui.Tooltip
+        public int ring3UpdateInterval = 10;
+        @ConfigEntry.Gui.Tooltip
+        public int ring4UpdateInterval = 60;
+
+        @ConfigEntry.Gui.Tooltip
+        public int ring1BlockChangeThreshold = 1;
+        @ConfigEntry.Gui.Tooltip
+        public int ring2BlockChangeThreshold = 2;
+        @ConfigEntry.Gui.Tooltip
+        public int ring3BlockChangeThreshold = 5;
+        @ConfigEntry.Gui.Tooltip
+        public int ring4BlockChangeThreshold = 20;
     }
 
     public static class Gi {

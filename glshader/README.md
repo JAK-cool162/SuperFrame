@@ -46,12 +46,26 @@ API:
 - `LightSourceManager.getLightSource(pos)`
 - `LightSource.getShadowCubemap().sampleShadow(worldPos)` → 0.0-1.0 shadow factor
 
-### 3. CASCADED SHADOW RINGS (planned)
-- Ring 1: 0-16 blocks = full resolution
-- Ring 2: 16-48 blocks = 50% res
-- Ring 3: 48-96 blocks = 25% res
-- Ring 4: 96+ blocks = chunk blob only
-- Farther rings update less frequently
+### 3. CASCADED SHADOW RINGS ✅
+- Divide world around player into 4 rings, rings move with player position
+  - Ring 1: 0-16 blocks = full resolution, updates on any block change
+  - Ring 2: 16-48 blocks = 50% resolution, updates every 2-3 block changes
+  - Ring 3: 48-96 blocks = 25% resolution, updates lazily, low priority
+  - Ring 4: 96+ blocks = chunk blob only (8x8), minimal calculation, barely ever updates
+- Farther rings update LESS frequently than closer rings
+- Hook into existing dirty-flag system from Step 2
+- Ring-aware block change threshold: R1=1, R2=2, R3=5, R4=20 changes
+- Ring-aware update intervals: R1=1 tick, R2=3 ticks, R3=10 ticks, R4=60 ticks
+- Prioritized update scheduler – Ring1 first, then Ring2, etc., closest first within ring
+- Cubemap resolution scales with ring – auto-adjusts when light moves between rings
+- All ring radii, resolution scales, update intervals, and block change thresholds are configurable via Cloth Config
+
+Files:
+- `shadow/ShadowRing.java` – RING_1..RING_4 enum, boundaries, resolutionScale, updateIntervalTicks, blockChangeThreshold
+- `shadow/CascadedShadowManager.java` – player position tracking, ring assignment, update frequency scheduler, `getRingForPos()`, `shouldUpdateThisTick()`, `shouldMarkDirtyOnBlockChange()`, `getResolutionForLight()`
+- `light/LightSource.java` – extended with: `currentRing`, `blockChangeCounter`, `lastShadowUpdateTick`, `updateRing()`, `shouldUpdateThisTick()`, `onNearbyBlockChange()`
+- `light/LightSourceManager.java` – ring-aware `markDirtyInRange()`, prioritized `tick()` – sorts dirty lights by ring priority + distance, respects maxUpdatesPerFrame budget
+- `config/GlShaderConfig.java` – `Shadows.cascaded` – ring radii, resolution scales, update intervals, block change thresholds – all configurable in ModMenu
 
 ### 4. STATIC WORLD vs ENTITY LAYER (planned)
 - Static world renders at 25% res → handed to SuperFrame for FSR upscaling
@@ -72,8 +86,9 @@ API:
 
 ## SuperFrame integration
 - `compat/SuperFrameCompat.java` – reflection-based, optional runtime dep
-- Register scale change listener → invalidate light cache
+- Register scale change listener → invalidate light cache + mark all shadow cubemaps dirty
 - Static world layer is designed to render into SuperFrame's scaled target
+- Cascaded shadow rings automatically adjust cubemap resolution when SuperFrame render scale changes
 
 Install both mods:
 - `superframe-0.1.0.jar`
