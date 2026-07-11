@@ -18,23 +18,23 @@
 
 ## Minecraft Version
 
-Target: **Minecraft 1.21.1**, Fabric Loader ≥0.16.14, Java 21
+Target: **Minecraft 1.21.11**, Fabric Loader ≥0.18.2, Java 21
 
-- Fabric API: `0.116.6+1.21.1`
-- Cloth Config: `15.0.140`
-- ModMenu: `11.0.3`
+- Fabric API: `0.139.4+1.21.11`
+- Cloth Config: `21.11.150+fabric`
+- ModMenu: `14.0.0`
+- Sodium: `0.6.13+mc1.21.11` (optional)
 
-### Porting to 1.21.5+ / 1.21.11
+### Rendering pipeline
 
-The repo includes FSR 1.0 shaders (`assets/superframe/shaders/core/easu.fsh`, `rcas.fsh`) ported from [RenderScale](https://github.com/Zolo101/RenderScale) (MIT).
+FSR 1.0 EASU+RCAS shaders are included (`assets/superframe/shaders/core/easu.fsh`, `rcas.fsh`).
 
-For 1.21.5+ (new RenderPipeline / blit pipeline):
-1. bump `minecraft_version` in `gradle.properties` to `1.21.5` / `1.21.8` / `1.21.11`
-2. update Fabric API / Cloth Config / ModMenu versions accordingly
-3. enable the `Upscaler.blit()` RenderPipeline path in `Upscaler.java` (commented out)
-4. replace the `src.blitToScreen()` call in `SuperFrame.upscaleToTarget()` with `Upscaler.blit(...)`
+- **1.21.1 – 1.21.4**: uses vanilla `blitToScreen` (Nearest / Bilinear)
+- **1.21.5+ / 1.21.11**: enable the `Upscaler.blit()` RenderPipeline path in `Upscaler.java` for full FSR 1.0
+  1. `SuperFrame.upscaleToTarget()` → call `Upscaler.blit(...)` instead of `src.blitToScreen()`
+  2. Pipelines are already defined in `Upscaler.java` (commented)
 
-All the shader assets are already included.
+All shader assets are included.
 
 ---
 
@@ -47,7 +47,7 @@ UI / HUD is rendered afterwards at native resolution, so text stays crisp.
 Upscalers:
 - Nearest – fastest, pixelated
 - Bilinear – smooth
-- FSR 1.0 – AMD FidelityFX Super Resolution EASU + RCAS (1.21.5+)
+- FSR 1.0 – AMD FidelityFX Super Resolution EASU + RCAS (1.21.11 – enable RenderPipeline path in Upscaler.java)
 - CAS – Contrast Adaptive Sharpen
 
 ### Frame Generation
@@ -106,16 +106,20 @@ SuperFrame adds: Frame Generation module, performance tweak suite, keybind HUD, 
 
 ## GLShader companion mod
 
-`glshader/` – a separate Fabric mod that implements:
+`glshader/` – Minecraft 1.21.11 / Java 21 – separate Fabric mod
+
+Implements:
 
 1. **Chunk Light Cache System** ✅ – LevelChunk mixin, pre-calculated light zones, invalidates on block change
-2. Per-Light Shadow Cubemap (planned)
+2. **Per-Light Shadow Cubemap** ✅ – each BlockPos light owns a 360° shadow cubemap, 6-face depth map, cached, only recalculates when a block changes within light range, NOT every frame – max N updates/frame configurable
 3. Cascaded Shadow Rings (planned)
 4. Static World vs Entity Layer – 25% / 75% split → SuperFrame FSR (planned)
 5. Heightmap Sun Occlusion (planned)
 6. Fake Global Illumination (planned)
 
-GLShader automatically disables itself if Iris shader packs are active. SuperFrame scale changes invalidate the light cache.
+- Auto-disables if Iris shader pack is active
+- SuperFrame scale change → invalidate light cache + shadow cubemaps
+- Compatible: ModMenu, Cloth Config, Fabric API, Sodium, Iris, SuperFrame
 
 Build:
 ```
@@ -124,7 +128,7 @@ cd glshader
 ```
 Output: `build/libs/glshader-0.1.0.jar`
 
-See [glshader/README.md](./glshader/README.md) for details.
+See [glshader/README.md](./glshader/README.md) for full API docs.
 
 ---
 
