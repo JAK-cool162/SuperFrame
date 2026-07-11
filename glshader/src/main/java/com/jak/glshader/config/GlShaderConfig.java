@@ -35,7 +35,17 @@ public class GlShaderConfig implements ConfigData {
     }
 
     public static class Shadows {
+        @ConfigEntry.Gui.Tooltip
         public boolean perLightShadowCubemap = true;
+
+        @ConfigEntry.Gui.Tooltip
+        @ConfigEntry.BoundedDiscrete(min = 8, max = 128)
+        public int cubemapResolution = 32;
+
+        @ConfigEntry.Gui.Tooltip
+        @ConfigEntry.BoundedDiscrete(min = 1, max = 8)
+        public int maxUpdatesPerFrame = 2;
+
         public boolean cascadedRings = true;
         public boolean heightmapSunOcclusion = true;
     }
@@ -50,6 +60,7 @@ public class GlShaderConfig implements ConfigData {
         ConfigHolder<GlShaderConfig> holder = AutoConfig.register(GlShaderConfig.class, JanksonConfigSerializer::new);
         holder.registerSaveListener((manager, data) -> {
             com.jak.glshader.light.LightCacheManager.invalidateAll();
+            com.jak.glshader.light.LightSourceManager.markAllDirty();
             return InteractionResult.PASS;
         });
         return holder;

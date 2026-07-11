@@ -4,11 +4,11 @@ Chunk light cache, shadow cubemaps, cascaded shadows, heightmap sun occlusion, a
 
 Designed to feed into **SuperFrame** for FSR upscaling + FrameGen output.
 
-- **Target:** Minecraft 1.21.1, Java 21 (1.21.11 compatible – see gradle.properties)
+- **Target:** Minecraft 1.21.11, Java 21
 - **Dependencies:** Fabric API, Cloth Config, ModMenu (all required)
 - **Optional / Compatible:** Sodium, Iris, SuperFrame
   - If Iris shader pack is active, GLShader disables itself automatically
-  - SuperFrame integration: static world layer → SuperFrame render target, scale change invalidates shadow cache
+  - SuperFrame integration: static world layer → SuperFrame render target, scale change invalidates light cache + shadow cubemaps
 
 ---
 
@@ -26,10 +26,25 @@ Files:
 - `light/ChunkLightCache.java`
 - `mixin/LevelChunkMixin.java`
 
-### 2. PER LIGHT SOURCE SHADOW CUBEMAP (planned)
-- Each light source owns a 360° shadow cubemap
-- Cached, only recalculates when block changes within light range
-- Not recalculated every frame
+### 2. PER LIGHT SOURCE SHADOW CUBEMAP ✅
+- Each `BlockPos` light source owns a 360° shadow cubemap
+- Store as a depth map per light (6 faces)
+- Cache it — only recalculate when a block changes within that light's range
+- Register a block change listener via Mixin on `LevelChunk.setBlockState()`
+- On change: find all light sources within range, mark their cubemap dirty
+- Only dirty cubemaps get recalculated next frame – max N per frame (configurable)
+- Do NOT recalculate every frame
+
+Files:
+- `light/ShadowCubemap.java` – 6-face depth map, CPU raymarch, sampleShadow()
+- `light/LightSource.java` – owns cubemap, lightLevel, dirty flag
+- `light/LightSourceManager.java` – ConcurrentHashMap<BlockPos, LightSource>, chunk spatial index, markDirtyInRange(), tick()
+- `util/ShadowUtils.java` – cubemapPixelToDirection()
+- `mixin/LevelChunkMixin.java` – block change hook, light source scan on chunk load
+
+API:
+- `LightSourceManager.getLightSource(pos)`
+- `LightSource.getShadowCubemap().sampleShadow(worldPos)` → 0.0-1.0 shadow factor
 
 ### 3. CASCADED SHADOW RINGS (planned)
 - Ring 1: 0-16 blocks = full resolution

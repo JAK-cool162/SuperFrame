@@ -11,10 +11,11 @@ public class GlShader {
 
     public static void init() {
         GlShaderClient.LOGGER.info("GLShader core init – SuperFrame integration: {}", SuperFrameCompat.isSuperFrameLoaded());
-        // Hook SuperFrame scale change to invalidate shadow cache
+        // Hook SuperFrame scale change to invalidate shadow cache + shadow cubemaps
         SuperFrameCompat.registerScaleChangeListener(() -> {
             com.jak.glshader.light.LightCacheManager.invalidateAll();
-            GlShaderClient.LOGGER.info("SuperFrame scale changed – light cache invalidated");
+            com.jak.glshader.light.LightSourceManager.markAllDirty();
+            GlShaderClient.LOGGER.info("SuperFrame scale changed – light cache + shadow cubemaps invalidated");
         });
     }
 
