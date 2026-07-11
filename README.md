@@ -1,6 +1,10 @@
-# SuperFrame
+# SuperFrame + GLShader
 
-Upscaling, performance tweaks, and experimental frame generation for Minecraft (Fabric).
+**SuperFrame** – Upscaling, performance tweaks, and experimental frame generation for Minecraft (Fabric).
+
+**GLShader** – Chunk light cache, shadow cubemaps, cascaded shadows, heightmap sun occlusion, and cheap GI. Designed to feed into SuperFrame for FSR upscaling + FrameGen. See [`glshader/`](./glshader/).
+
+---
 
 - **Works on any architecture**: ARM64, x86_64, etc. – pure Java / OpenGL, no native DLSS/FSR2 runtime required.
 - **Upscaling**: Nearest / Bilinear / FSR 1.0 (EASU + RCAS) / CAS Sharpen
@@ -97,6 +101,30 @@ Output: `build/libs/superframe-0.1.0.jar`
 - Fabric, Cloth Config, ModMenu, Sodium, Iris teams
 
 SuperFrame adds: Frame Generation module, performance tweak suite, keybind HUD, architecture-agnostic design, extended config.
+
+---
+
+## GLShader companion mod
+
+`glshader/` – a separate Fabric mod that implements:
+
+1. **Chunk Light Cache System** ✅ – LevelChunk mixin, pre-calculated light zones, invalidates on block change
+2. Per-Light Shadow Cubemap (planned)
+3. Cascaded Shadow Rings (planned)
+4. Static World vs Entity Layer – 25% / 75% split → SuperFrame FSR (planned)
+5. Heightmap Sun Occlusion (planned)
+6. Fake Global Illumination (planned)
+
+GLShader automatically disables itself if Iris shader packs are active. SuperFrame scale changes invalidate the light cache.
+
+Build:
+```
+cd glshader
+./gradlew build
+```
+Output: `build/libs/glshader-0.1.0.jar`
+
+See [glshader/README.md](./glshader/README.md) for details.
 
 ---
 

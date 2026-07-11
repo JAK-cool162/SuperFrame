@@ -1,0 +1,18 @@
+{
+  "text.autoconfig.glshader.title": "GLShader Settings",
+  "text.autoconfig.glshader.option.enabled": "Enable GLShader",
+  "text.autoconfig.glshader.option.disableWhenIrisActive": "Disable when Iris shaders active",
+  "text.autoconfig.glshader.option.disableWhenIrisActive.@Tooltip": "If an Iris/Oculus shader pack is active, GLShader lighting disables itself to avoid conflict.",
+  "text.autoconfig.glshader.option.lightCache": "Light Cache",
+  "text.autoconfig.glshader.option.lightCache.enabled": "Enable Chunk Light Cache",
+  "text.autoconfig.glshader.option.lightCache.precalculateLightZones": "Pre-calculate Light Zones",
+  "text.autoconfig.glshader.option.lightCache.zoneSize": "Light Zone Size (blocks)",
+  "text.autoconfig.glshader.option.shadows": "Shadows",
+  "text.autoconfig.glshader.option.shadows.perLightShadowCubemap": "Per-Light Shadow Cubemap",
+  "text.autoconfig.glshader.option.shadows.cascadedRings": "Cascaded Shadow Rings",
+  "text.autoconfig.glshader.option.shadows.heightmapSunOcclusion": "Heightmap Sun Occlusion",
+  "text.autoconfig.glshader.option.gi": "Global Illumination",
+  "text.autoconfig.glshader.option.gi.fakeGlobalIllumination": "Fake GI",
+  "text.autoconfig.glshader.option.gi.colorBleeding": "Color Bleeding",
+  "text.autoconfig.glshader.option.gi.ambientOcclusionFromHeightmap": "AO from Heightmap"
+}

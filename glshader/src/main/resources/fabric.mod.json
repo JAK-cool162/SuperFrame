@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "id": "glshader",
+  "version": "${version}",
+  "name": "GLShader",
+  "description": "Chunk light cache, shadow cubemaps, cascaded shadows, heightmap sun occlusion, and cheap GI. Integrates with SuperFrame for upscaling / framegen.",
+  "authors": ["JAK-cool162"],
+  "contact": {
+    "homepage": "https://github.com/JAK-cool162/SuperFrame",
+    "sources": "https://github.com/JAK-cool162/SuperFrame"
+  },
+  "license": "MIT",
+  "icon": "assets/glshader/icon.png",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "com.jak.glshader.GlShaderClient"
+    ],
+    "modmenu": [
+      "com.jak.glshader.compat.ModMenuApiImpl"
+    ]
+  },
+  "mixins": [
+    "glshader.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.16.0",
+    "fabric-api": "*",
+    "minecraft": "~1.21.1",
+    "java": ">=21",
+    "cloth-config": ">=15.0.0"
+  },
+  "suggests": {
+    "modmenu": "*",
+    "sodium": "*",
+    "iris": "*",
+    "superframe": "*"
+  }
+}
